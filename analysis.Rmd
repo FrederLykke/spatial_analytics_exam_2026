@@ -1,0 +1,472 @@
+---
+title: "Distribution of Psychiatric Diagnoses in Denmark municipalities from 2013 to 2023"
+author: "Frederikke Lykke Korreborg & Nanna Klitgaard Damgaard"
+date: "06 June 2026 updated `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+Both authors contributed equally to this code. 
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+               cache=TRUE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+```
+
+```{r libraries, include=FALSE}
+library(sf)
+library(tidyverse)
+library(spdep)
+library(tmap)
+tmap_mode("plot")
+library(googlesheets4)
+```
+
+
+# Load spatial and psychiatric data
+
+```{r load-data}
+df_total <- readRDS("df_total.rds")
+df_reg <- readRDS("df_reg.rds")
+df_adhd <- readRDS("df_adhd.rds")
+df_autism <- readRDS("df_autism.rds")
+
+# Get hospitals
+gs4_deauth() # if the authentication is not working for you
+hospitals <- read_sheet("https://docs.google.com/spreadsheets/d/1xsQhjXOXMgs5R-Py57zJf4n6zH6pGpBJg8roBoSC02Y/edit?gid=0#gid=0",
+                     range = "Ark1",
+                     col_types = "ccnn")
+
+# Convert hospitals to sf points
+hospitals_sf <- st_as_sf(
+  hospitals,
+  coords = c("Longitude", "Latitude"),
+  crs = 4326)
+```
+
+
+# Map diagnoses across Denmark
+
+```{r colour palettes for plotting}
+total_palette  <- colorRampPalette(c("#f7fbff", "#0b3c5d"))
+adhd_palette   <- colorRampPalette(c("#f7f7fb", "#4a3f8c"))
+autism_palette <- colorRampPalette(c("#f7fbf7", "#0b5d4a"))
+```
+
+
+```{r maps total, eval=FALSE}
+breaks <- seq(26, 101, by = 15) # make sure scales on legends are the same
+
+# Plot of total diagnoses per 1000 children for 2013 by municipality
+map2013 <- tm_shape(df_total) +
+  tm_polygons(
+    "2013",
+    palette = total_palette(2),
+    title = " ",
+    colorNA = "#4F4F4F",
+    breaks = breaks) +
+  tm_credits("Municipalities with missing data: \nLæsø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("Diagnoses per 1000 Children by Municipality (2013)")
+map2013
+
+# Plot of total diagnoses per 1000 children for 2023 by municipality 
+map2023 <- tm_shape(df_total) +
+  tm_polygons(
+    "2023",
+    palette = total_palette(2),
+    title = " ",
+    textNA = "",
+    breaks = breaks) +
+  tm_title("Diagnoses per 1000 Children by Municipality (2023)")
+map2023
+```
+
+## Percentage change maps
+
+```{r maps total percentage change municipality}
+# Plot of total percentage change from 2013 to 2023 (all diagnoses) by municipality 
+rest_palette <- colorRampPalette(c("#f7f7f7", "#0b3c5d"))(6)
+custom_palette <- c("#FFF1B8", rest_palette)
+
+map_total_pct <- tm_shape(df_total) +
+  tm_polygons(
+    "pct_change",
+    palette = custom_palette,
+    colorNA = "#4F4F4F",
+    title = "% change") +
+  tm_credits("Municipalities with missing data: \nLæsø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Municipality")
+map_total_pct
+```
+
+
+```{r maps total percentage change region}
+# Plot of total diagnoses per 1000 children for 2013 region
+breaks <- seq(30, 72, by = 10)
+
+map2013_reg <- tm_shape(df_reg) +
+  tm_polygons(
+    "2013",
+    palette = total_palette(2),
+    title = " ",
+    textNA = "",
+    breaks = breaks) +
+  # Add hospital points
+  tm_shape(hospitals_sf) +
+  tm_symbols(
+    size = 0.8,
+    col = "indianred",
+    border.col = "black",
+    shape = 20) +
+  tm_title("Diagnoses per 1000 Children by Region (2013)")
+map2013_reg
+
+# Plot of total diagnoses per 1000 children for 2023 by municipality 
+map2023_reg <- tm_shape(df_reg) +
+  tm_polygons(
+    "2023",
+    palette = total_palette(2),
+    title = " ",
+    textNA = "",
+    breaks = breaks) +
+  # Add hospital points
+  tm_shape(hospitals_sf) +
+  tm_symbols(
+    size = 0.8,
+    col = "indianred",
+    border.col = "black",
+    shape = 20) +
+  tm_title("Diagnoses per 1000 Children by Region (2023)")
+map2023_reg
+
+
+# Plot of total percentage change from 2013 to 2023 (all diagnoses) by region
+breaks <- seq(25, 85, by = 15)
+map_reg_pct <- tm_shape(df_reg) +
+  tm_polygons(
+    "pct_change",
+    palette = total_palette(2),
+    textNA = "",
+    title = "% change",
+    breaks = breaks) +
+  # Add hospital points
+  tm_shape(hospitals_sf) +
+  tm_symbols(
+    size = 0.8,
+    col = "indianred",
+    border.col = "black",
+    shape = 20) +
+  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Region")
+map_reg_pct
+```
+
+
+```{r maps ADHD}
+breaks <- seq(0, 60, by = 10)
+
+# Plot of ADHD diagnoses per 1000 children for 2013 and 2023 by municipality 
+map2013_adhd <- tm_shape(df_adhd) +
+  tm_polygons(
+    "2013",
+    palette = adhd_palette(2),
+    breaks = breaks,
+    colorNA = "#4F4F4F",
+    title = " ") +
+  tm_credits("Municipalities with missing data: \nLæsø, Fanø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("ADHD Diagnoses per 1000 Children (2013)")
+map2013_adhd
+
+map2023_adhd <- tm_shape(df_adhd) +
+  tm_polygons(
+    "2023",
+    palette = adhd_palette(2),
+    breaks = breaks,
+    colorNA = "#4F4F4F",
+    title = " ") +
+  tm_credits("Municipalities with missing data: \nÆrø, Langeland",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("ADHD Diagnoses per 1000 Children (2023)")
+map2023_adhd
+```
+
+```{r maps autism}
+# Plot of Autism diagnoses per 1000 children for 2013 and 2023 by municipality 
+map2013_autism <- tm_shape(df_autism) +
+  tm_polygons(
+    "2013",
+    palette = autism_palette(2),
+    breaks = breaks,
+    colorNA = "#4F4F4F",
+    title = " ") +
+  tm_credits("Municipalities with missing data: \nLæsø, Fanø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("Autism Diagnoses per 1000 Children (2013)")
+map2013_autism
+
+map2023_autism <- tm_shape(df_autism) +
+  tm_polygons(
+    "2023",
+    palette = autism_palette(2),
+    breaks = breaks,
+    colorNA = "#4F4F4F",
+    title = " ") +
+  tm_credits("Municipalities with missing data: \nLæsø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_title("Autism Diagnoses per 1000 Children (2023)")
+map2023_autism
+```
+
+
+
+# Spatial autocorrelation
+## K-nearest neighbour
+
+```{r knn-neighbours}
+# Subset municipalities with valid data
+missing_total <- df_total %>%
+  filter(if_any("2013":"2023", is.na)) %>%
+  distinct(NAME_2)
+missing_total #Print which municipalities have missing data
+
+df_total_clean <- df_total %>% filter(!NAME_2 %in% missing_total$NAME_2)
+
+# Create centroids
+centroids <- st_centroid(df_total_clean)
+
+# Coordinates
+coords <- st_coordinates(centroids)
+
+# kNN neighbours
+nb_knn <- knearneigh(coords, k = 5)
+nb <- knn2nb(nb_knn)
+
+# Convert neighbour links to sf object
+nb_lines <- nb2lines(nb, coords = coords, as_sf = TRUE)
+
+# Map
+knn_map <- 
+  tm_shape(df_total) +
+  tm_polygons(col = "#DCEFD8", border.col = "white", lwd = 0.3) +
+  tm_shape(nb_lines) +
+  tm_lines(col = "#2C7FB8", lwd = 1) +
+  tm_shape(centroids) +
+  tm_symbols(col = "#1B4332", size = 0.4) +
+  tm_credits("Excluded municipalities: \nLæsø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_layout(
+    main.title = "K-Nearest Neighbour Network (k = 5)",
+    main.title.size = 1)
+
+knn_map
+```
+
+```{r knn-neighbours ADHD}
+# Subset municipalities with valid data
+missing_adhd <- df_adhd %>%
+  filter(if_any("2013":"2023", is.na)) %>%
+  distinct(NAME_2)
+missing_adhd #Print which municipalities have missing data
+
+df_adhd_clean <- df_adhd %>% filter(!NAME_2 %in% missing_adhd$NAME_2)
+
+
+# Create centroids
+adhd_centroids <- st_centroid(df_adhd_clean)
+
+# Coordinates
+adhd_coords <- st_coordinates(adhd_centroids)
+
+# kNN neighbours
+adhd_nb_knn <- knearneigh(adhd_coords, k = 5)
+adhd_nb <- knn2nb(adhd_nb_knn)
+
+# Convert neighbour links to sf object
+adhd_nb_lines <- nb2lines(adhd_nb, coords = adhd_coords, as_sf = TRUE)
+
+# Map
+adhd_knn_map <- 
+  tm_shape(df_adhd_clean) +
+  tm_polygons(col = "#DCEFD8", border.col = "white", lwd = 0.3) +
+  tm_shape(adhd_nb_lines) +
+  tm_lines(col = "#2C7FB8", lwd = 1) +
+  tm_shape(adhd_centroids) +
+  tm_symbols(col = "#1B4332", size = 0.4) +
+  tm_credits("Excluded municipalities: \nLæsø, Ærø, Fanø, Langeland",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_layout(
+    main.title = "K-Nearest Neighbour Network (k = 5) for ADHD dataset",
+    main.title.size = 1)
+
+adhd_knn_map
+```
+
+```{r knn-neighbours autism}
+# Subset municipalities with valid data
+missing_au <- df_autism %>%
+  filter(if_any("2013":"2023", is.na)) %>%
+  distinct(NAME_2)
+missing_au #Print which municipalities have missing data
+
+df_au_clean <- df_autism %>% filter(!NAME_2 %in% missing_au$NAME_2)
+
+
+# Create centroids
+au_centroids <- st_centroid(df_au_clean)
+
+# Coordinates
+au_coords <- st_coordinates(au_centroids)
+
+# kNN neighbours
+au_nb_knn <- knearneigh(au_coords, k = 5)
+au_nb <- knn2nb(au_nb_knn)
+
+# Convert neighbour links to sf object
+au_nb_lines <- nb2lines(au_nb, coords = au_coords, as_sf = TRUE)
+
+# Map
+au_knn_map <- 
+  tm_shape(df_au_clean) +
+  tm_polygons(col = "#DCEFD8", border.col = "white", lwd = 0.3) +
+  tm_shape(au_nb_lines) +
+  tm_lines(col = "#2C7FB8", lwd = 1) +
+  tm_shape(au_centroids) +
+  tm_symbols(col = "#1B4332", size = 0.4) +
+  tm_credits("Excluded municipalities: \nLæsø, Fanø",
+             position = c("right", "top"),
+             size = 0.8) +
+  tm_layout(
+    main.title = "K-Nearest Neighbour Network (k = 5) for Autism dataset",
+    main.title.size = 1)
+
+au_knn_map
+```
+
+
+
+## Moran's I tests
+### Total 2013, 2023, and pct change
+```{r Morans I total}
+# Row-standardised weights
+lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+
+# 2013 MORAN'S I TEST
+y_2013 <- df_total_clean$"2013"
+moran.test(y_2013, lw, zero.policy = TRUE)
+moran.mc(y_2013, lw, nsim = 999, zero.policy = TRUE)
+
+# 2023 MORAN'S I TEST
+y_2023 <- df_total_clean$"2023"
+moran.test(y_2023, lw, zero.policy = TRUE)
+moran.mc(y_2023, lw, nsim = 999, zero.policy = TRUE)
+
+# PCT MORAN'S I TEST
+y_pct <- df_total_clean$pct_change
+moran.test(y_pct, lw, zero.policy = TRUE)
+moran.mc(y_pct, lw, nsim = 999, zero.policy = TRUE)
+```
+
+### ADHD 2013, 2023, and pct change
+```{r Morans I ADHD}
+# Row-standardised weights
+adhd_lw <- nb2listw(adhd_nb, style = "W", zero.policy = TRUE)
+
+# ADHD 2013 MORAN'S I TEST
+y_adhd_2013 <- df_adhd_clean$"2013"
+moran.test(y_adhd_2013, adhd_lw, zero.policy = TRUE)
+moran.mc(y_adhd_2013, adhd_lw, nsim = 999, zero.policy = TRUE)
+
+# ADHD 2023 MORAN'S I TEST
+y_adhd_2023 <- df_adhd_clean$"2023"
+moran.test(y_adhd_2023, adhd_lw, zero.policy = TRUE)
+moran.mc(y_adhd_2023, adhd_lw, nsim = 999, zero.policy = TRUE)
+
+# ADHD PCT CHANGE MORAN'S I TEST
+y_adhd_pct <- df_adhd_clean$pct_change_adhd
+moran.test(y_adhd_pct, adhd_lw, zero.policy = TRUE)
+moran.mc(y_adhd_pct, adhd_lw, nsim = 999, zero.policy = TRUE)
+```
+
+### Autism 2013, 2023, and pct change
+```{r Morans I Autism}
+# Row-standardised weights
+au_lw <- nb2listw(au_nb, style = "W", zero.policy = TRUE)
+
+# AUTISM 2013 MORAN'S I TEST
+y_au_2013 <- df_au_clean$"2013"
+moran.test(y_au_2013, au_lw, zero.policy = TRUE)
+moran.mc(y_au_2013, au_lw, nsim = 999, zero.policy = TRUE)
+
+# AUTISM 2023 MORAN'S I TEST
+y_au_2023 <- df_au_clean$"2023"
+moran.test(y_au_2023, au_lw, zero.policy = TRUE)
+moran.mc(y_au_2023, au_lw, nsim = 999, zero.policy = TRUE)
+
+# AUTISM PCT CHANGE MORAN'S I TEST
+y_au_pct <- df_au_clean$pct_change_autism
+moran.test(y_au_pct, au_lw, zero.policy = TRUE)
+moran.mc(y_au_pct, au_lw, nsim = 999, zero.policy = TRUE)
+```
+
+```{r distance to nearest hospital}
+# Plot to show distance to nearest hospital by municipality
+
+# Project to metric CRS
+df_total_proj <- st_transform(df_total, 32632)
+hospitals_proj <- st_transform(hospitals_sf, 32632)
+
+# Get centroids
+muni_centroids <- st_centroid(df_total_proj)
+
+# Distance to hospitals
+dist_matrix <- st_distance(muni_centroids, hospitals_proj)
+
+# Find nearest hospitals
+df_total_proj$nearest_hospital_m <- apply(dist_matrix, 1, min)
+df_total_proj$nearest_hospital_km <-as.numeric(df_total_proj$nearest_hospital_m) / 1000
+
+nearest_idx <- apply(dist_matrix, 1, which.min)
+df_total_proj$nearest_hospital <-hospitals_proj$Placename[nearest_idx]
+
+df_total_proj %>% 
+  st_drop_geometry() %>% 
+  select(NAME_2, nearest_hospital_m, nearest_hospital_km, nearest_hospital) %>% 
+  head()
+
+breaks <- seq(0, 175, by = 35)
+tm_shape(df_total_proj) +
+  tm_polygons(
+    "nearest_hospital_km",
+    palette = "Blues",
+    title = "Distance to nearest hospital (km)",
+    breaks = breaks) +
+  tm_shape(hospitals_proj) +
+  tm_symbols(
+    shape = 20,
+    col = "indianred",
+    border.col = "white",
+    size = 0.7)
+```
+

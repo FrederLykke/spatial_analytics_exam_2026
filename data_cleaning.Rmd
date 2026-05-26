@@ -1,0 +1,142 @@
+---
+title: "Distribution of Psychiatric Diagnoses in Denmark municipalities from 2013 to 2023"
+author: "Frederikke Lykke Korreborg & Nanna Klitgaard Damgaard"
+date: "06 June 2026 updated `r format(Sys.time(), '%B %d, %Y')`
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+Both authors contributed equally to this code. 
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(geodata)
+library(readxl)
+library(tidyverse)
+library(sf)
+library(spdep)
+```
+
+
+```{r download geometry data}
+# Download gadm data
+dnk <- gadm(country = "DNK", level = 2, path = "data/")
+
+# Convert to sf object
+dnk_sf <- st_as_sf(dnk)
+
+# Save as RDS
+saveRDS(dnk_sf, "data/gadm36_DNK_2_sp.rds")
+```
+
+
+```{r Load in data}
+# Municipality geometries
+mun <- readRDS("data/gadm36_DNK_2_sp.rds") %>% 
+  st_as_sf() %>% 
+  select(-NL_NAME_1, -VARNAME_2, -NL_NAME_2, -CC_2) %>% #Remove unnecessary NA columns 
+  filter(NAME_2 != "Christiansø")
+
+reg <- readRDS("data/gadm36_DNK_1_sp.rds") %>% 
+  st_as_sf() %>% 
+  select(-NL_NAME_1, -VARNAME_1, -CC_1)
+
+# Psychiatric data
+# Total from 2013 to 2023 by municipality
+diag_total <- read_excel("data/total_antal_born_og_unge_med_udvalgte_diagnoser_pr_1000_2013_til_2023.xlsx")
+
+# Total from 2013 to 2023 by region
+diag_total_reg <- read_excel("data/region_total_antal_born_og_unge_med_udvalgte_diagnoser_pr_1000_2013_til_2023.xlsx")
+
+# By diagnosis for 2013 and 2023
+diag <- read_excel("data/antal_born_og_unge_med_udvalgte_diagnoser_pr_1000_2013_og_2023.xlsx")
+
+```
+
+```{r Data cleaning}
+# Convert to numeric and change commas to periods
+diag_total <- diag_total %>%
+  mutate(across(
+    c("2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"),
+    ~as.numeric(gsub(",", ".", .x))))
+
+diag_total_reg <- diag_total_reg %>%
+  mutate(across(
+    c("2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"),
+    ~as.numeric(gsub(",", ".", .x))))
+
+diag <- diag %>%
+  mutate(across(
+    c(adhd, autisme, stress, udvikl_f, angst),
+    ~as.numeric(gsub(",", ".", .x))))
+
+# Fix misaligned municipal names
+`%nin%` <- Negate(`%in%`)
+diag_total$kommune %in% mun$NAME_2
+diag_total$kommune[diag_total$kommune %nin% mun$NAME_2]
+mun$NAME_2[30] <- "Aarhus"
+mun$NAME_2[20] <- "Høje-Taastrup"
+mun$NAME_2[59] <- "Vesthimmerlands"
+```
+
+```{r join dataframes}
+# Combine data with mun to get geometries for municipalities
+df_total <- mun %>%
+  left_join(diag_total, by = c("NAME_2" = "kommune"))
+
+df_reg <- reg %>%
+  left_join(diag_total_reg, by = c("NAME_1" = "region"))
+
+df_indv <- mun %>%
+  left_join(diag, by = c("NAME_2" = "kommune"))
+```
+
+```{r create percentage change columns}
+# Create percentage change column for df_total (change from 2013 to 2023)
+df_total <- df_total %>% 
+  mutate(
+  pct_change = case_when(
+    is.na(`2013`) | is.na(`2023`) ~ NA_real_,
+    `2013` == 0 ~ NA_real_,
+    TRUE ~ round((`2023` - `2013`) / `2013` * 100, 2)))
+
+# Create percentage change column for df_reg (change from 2013 to 2023)
+df_reg <- df_reg %>% 
+  mutate(
+  pct_change = case_when(
+    is.na(`2013`) | is.na(`2023`) ~ NA_real_,
+    `2013` == 0 ~ NA_real_,
+    TRUE ~ round((`2023` - `2013`) / `2013` * 100, 2)))
+
+# ADHD dataframe
+df_adhd <- df_indv %>%
+  select(NAME_2, year, adhd) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = adhd) %>%
+  mutate(
+  pct_change_adhd = case_when(
+    is.na(`2013`) | is.na(`2023`) ~ NA_real_,
+    `2013` == 0 ~ NA_real_,
+    TRUE ~ ((`2023` - `2013`) / `2013`) * 100))
+
+# Autism dataframe
+df_autism <- df_indv %>%
+  select(NAME_2, year, autisme) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = autisme) %>%
+  mutate(
+  pct_change_autism = case_when(
+    is.na(`2013`) | is.na(`2023`) ~ NA_real_,
+    `2013` == 0 ~ NA_real_,
+    TRUE ~ ((`2023` - `2013`) / `2013`) * 100))
+```
+
+```{r save to rds}
+# Save as rds
+saveRDS(df_total, "df_total.rds")
+saveRDS(df_reg, "df_reg.rds")
+saveRDS(df_adhd, "df_adhd.rds")
+saveRDS(df_autism, "df_autism.rds")
+```
