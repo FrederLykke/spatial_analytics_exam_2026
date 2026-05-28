@@ -66,7 +66,7 @@ autism_palette <- colorRampPalette(c("#f7fbf7", "#0b5d4a"))
 ```
 
 
-```{r maps total, eval=FALSE}
+```{r maps total}
 breaks <- seq(26, 101, by = 15) # make sure scales on legends are the same
 
 # Plot of total diagnoses per 1000 children for 2013 by municipality
@@ -459,14 +459,16 @@ breaks <- seq(0, 175, by = 35)
 tm_shape(df_total_proj) +
   tm_polygons(
     "nearest_hospital_km",
-    palette = "Blues",
-    title = "Distance to nearest hospital (km)",
-    breaks = breaks) +
+    palette = total_palette(2),
+    title = "Distance (km)",
+    breaks = breaks,
+    textNA = "") +
   tm_shape(hospitals_proj) +
   tm_symbols(
     shape = 20,
     col = "indianred",
     border.col = "white",
-    size = 0.7)
+    size = 0.7) +
+  tm_title("Distance to Nearest Psychiatric Hospital by Municipality")
 ```
 
