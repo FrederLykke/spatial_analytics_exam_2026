@@ -76,12 +76,16 @@ map2013 <- tm_shape(df_total) +
     palette = total_palette(2),
     title = " ",
     colorNA = "#4F4F4F",
-    breaks = breaks) +
-  tm_credits("Municipalities with missing data: \nLæsø",
-             position = c("right", "top"),
-             size = 0.8) +
-  tm_title("Diagnoses per 1000 Children by Municipality (2013)")
+    breaks = breaks,
+    border.col = "black") +
+  tm_credits(
+    "Municipalities with missing data: \nLæsø",
+    position = c("right", "top"),
+    size = 0.8) +
+  tm_title("Diagnoses per 1000 Children by Municipality (2013)") +
+  tm_layout(bg.color = "#dceef7")
 map2013
+
 
 # Plot of total diagnoses per 1000 children for 2023 by municipality 
 map2023 <- tm_shape(df_total) +
@@ -90,8 +94,10 @@ map2023 <- tm_shape(df_total) +
     palette = total_palette(2),
     title = " ",
     textNA = "",
-    breaks = breaks) +
-  tm_title("Diagnoses per 1000 Children by Municipality (2023)")
+    breaks = breaks,
+    border.col = "black") +
+  tm_title("Diagnoses per 1000 Children by Municipality (2023)") +
+  tm_layout(bg.color = "#dceef7")
 map2023
 ```
 
@@ -111,7 +117,8 @@ map_total_pct <- tm_shape(df_total) +
   tm_credits("Municipalities with missing data: \nLæsø",
              position = c("right", "top"),
              size = 0.8) +
-  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Municipality")
+  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Municipality") +
+  tm_layout(bg.color = "#dceef7")
 map_total_pct
 ```
 
@@ -134,7 +141,8 @@ map2013_reg <- tm_shape(df_reg) +
     col = "indianred",
     border.col = "black",
     shape = 20) +
-  tm_title("Diagnoses per 1000 Children by Region (2013)")
+  tm_title("Diagnoses per 1000 Children by Region (2013)") +
+  tm_layout(bg.color = "#dceef7")
 map2013_reg
 
 # Plot of total diagnoses per 1000 children for 2023 by municipality 
@@ -152,7 +160,8 @@ map2023_reg <- tm_shape(df_reg) +
     col = "indianred",
     border.col = "black",
     shape = 20) +
-  tm_title("Diagnoses per 1000 Children by Region (2023)")
+  tm_title("Diagnoses per 1000 Children by Region (2023)") +
+  tm_layout(bg.color = "#dceef7")
 map2023_reg
 
 
@@ -172,7 +181,8 @@ map_reg_pct <- tm_shape(df_reg) +
     col = "indianred",
     border.col = "black",
     shape = 20) +
-  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Region")
+  tm_title("Percentage Change in Diagnoses From 2013 to 2023 by Region") +
+  tm_layout(bg.color = "#dceef7")
 map_reg_pct
 ```
 
@@ -191,7 +201,8 @@ map2013_adhd <- tm_shape(df_adhd) +
   tm_credits("Municipalities with missing data: \nLæsø, Fanø",
              position = c("right", "top"),
              size = 0.8) +
-  tm_title("ADHD Diagnoses per 1000 Children (2013)")
+  tm_title("ADHD Diagnoses per 1000 Children (2013)") +
+  tm_layout(bg.color = "#dceef7")
 map2013_adhd
 
 map2023_adhd <- tm_shape(df_adhd) +
@@ -204,7 +215,8 @@ map2023_adhd <- tm_shape(df_adhd) +
   tm_credits("Municipalities with missing data: \nÆrø, Langeland",
              position = c("right", "top"),
              size = 0.8) +
-  tm_title("ADHD Diagnoses per 1000 Children (2023)")
+  tm_title("ADHD Diagnoses per 1000 Children (2023)") +
+  tm_layout(bg.color = "#dceef7")
 map2023_adhd
 ```
 
@@ -220,7 +232,8 @@ map2013_autism <- tm_shape(df_autism) +
   tm_credits("Municipalities with missing data: \nLæsø, Fanø",
              position = c("right", "top"),
              size = 0.8) +
-  tm_title("Autism Diagnoses per 1000 Children (2013)")
+  tm_title("Autism Diagnoses per 1000 Children (2013)") +
+  tm_layout(bg.color = "#dceef7")
 map2013_autism
 
 map2023_autism <- tm_shape(df_autism) +
@@ -233,7 +246,8 @@ map2023_autism <- tm_shape(df_autism) +
   tm_credits("Municipalities with missing data: \nLæsø",
              position = c("right", "top"),
              size = 0.8) +
-  tm_title("Autism Diagnoses per 1000 Children (2023)")
+  tm_title("Autism Diagnoses per 1000 Children (2023)") +
+  tm_layout(bg.color = "#dceef7")
 map2023_autism
 ```
 
@@ -277,7 +291,8 @@ knn_map <-
              size = 0.8) +
   tm_layout(
     main.title = "K-Nearest Neighbour Network (k = 5)",
-    main.title.size = 1)
+    main.title.size = 1) +
+  tm_layout(bg.color = "#dceef7")
 
 knn_map
 ```
@@ -318,7 +333,8 @@ adhd_knn_map <-
              size = 0.8) +
   tm_layout(
     main.title = "K-Nearest Neighbour Network (k = 5) for ADHD dataset",
-    main.title.size = 1)
+    main.title.size = 1) +
+  tm_layout(bg.color = "#dceef7")
 
 adhd_knn_map
 ```
@@ -359,7 +375,8 @@ au_knn_map <-
              size = 0.8) +
   tm_layout(
     main.title = "K-Nearest Neighbour Network (k = 5) for Autism dataset",
-    main.title.size = 1)
+    main.title.size = 1) +
+  tm_layout(bg.color = "#dceef7")
 
 au_knn_map
 ```
@@ -491,6 +508,7 @@ tm_shape(df_total_proj) +
     border.col = "white",
     size = 0.7) +
   tm_credits("● Psychiatric hospitals", col = "indianred", position = c("right", "top")) +
-  tm_title("Distance to Nearest Psychiatric Hospital by Municipality")
+  tm_title("Distance to Nearest Psychiatric Hospital by Municipality") +
+  tm_layout(bg.color = "#dceef7")
 ```
 
