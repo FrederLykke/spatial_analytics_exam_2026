@@ -47,7 +47,7 @@ df_autism <- readRDS("df_autism.rds")
 gs4_deauth() # if the authentication is not working for you
 hospitals <- read_sheet("https://docs.google.com/spreadsheets/d/1xsQhjXOXMgs5R-Py57zJf4n6zH6pGpBJg8roBoSC02Y/edit?gid=0#gid=0",
                      range = "Ark1",
-                     col_types = "ccnn")
+                     col_types = "cccnn")
 
 # Convert hospitals to sf points
 hospitals_sf <- st_as_sf(
@@ -437,25 +437,46 @@ moran.mc(y_au_pct, au_lw, nsim = 999, zero.policy = TRUE)
 df_total_proj <- st_transform(df_total, 32632)
 hospitals_proj <- st_transform(hospitals_sf, 32632)
 
-# Get centroids
-muni_centroids <- st_centroid(df_total_proj)
+# Municipality representative points
+muni_centroids <- st_point_on_surface(df_total_proj)
 
-# Distance to hospitals
-dist_matrix <- st_distance(muni_centroids, hospitals_proj)
+# Empty vectors to store results
+nearest_dist <- numeric(nrow(df_total_proj))
+nearest_hosp <- character(nrow(df_total_proj))
 
-# Find nearest hospitals
-df_total_proj$nearest_hospital_m <- apply(dist_matrix, 1, min)
-df_total_proj$nearest_hospital_km <-as.numeric(df_total_proj$nearest_hospital_m) / 1000
+for(i in seq_len(nrow(muni_centroids))) {
 
-nearest_idx <- apply(dist_matrix, 1, which.min)
-df_total_proj$nearest_hospital <-hospitals_proj$Placename[nearest_idx]
+  # Municipality region
+  region_i <- muni_centroids$NAME_1[i]
+
+  # Hospitals only in same region
+  hosp_region <- hospitals_proj %>%
+    filter(Region == region_i)
+
+  # Distances to hospitals in same region
+  dists <- st_distance(
+    muni_centroids[i, ],
+    hosp_region)
+
+  # Closest hospital
+  min_idx <- which.min(dists)
+
+  nearest_dist[i] <- as.numeric(dists[min_idx]) / 1000
+  nearest_hosp[i] <- hosp_region$Placename[min_idx]}
+
+# Add to dataframe
+df_total_proj$nearest_hospital_km <- nearest_dist
+df_total_proj$nearest_hospital <- nearest_hosp
+
 
 df_total_proj %>% 
   st_drop_geometry() %>% 
-  select(NAME_2, nearest_hospital_m, nearest_hospital_km, nearest_hospital) %>% 
+  select(NAME_1, NAME_2,
+         nearest_hospital,
+         nearest_hospital_km) %>% 
   head()
 
-breaks <- seq(0, 175, by = 35)
+breaks <- c(0, 25, 50, 75, 100, 172)
 tm_shape(df_total_proj) +
   tm_polygons(
     "nearest_hospital_km",
@@ -469,6 +490,7 @@ tm_shape(df_total_proj) +
     col = "indianred",
     border.col = "white",
     size = 0.7) +
+  tm_credits("● Psychiatric hospitals", col = "indianred", position = c("right", "top")) +
   tm_title("Distance to Nearest Psychiatric Hospital by Municipality")
 ```
 
